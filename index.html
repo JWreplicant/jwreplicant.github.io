@@ -1,0 +1,674 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="color-scheme" content="dark" />
+  <title>New Site — Matrix Rain</title>
+
+  <style>
+    :root{
+      --bg: #05070b;
+      --panel: rgba(10, 14, 20, 0.55);
+      --panel-strong: rgba(10, 14, 20, 0.72);
+      --stroke: rgba(120, 255, 180, 0.14);
+      --text: rgba(235, 255, 245, 0.92);
+      --muted: rgba(210, 255, 230, 0.62);
+      --accent: #66ff99;
+      --accent2: #2cffd3;
+      --shadow: 0 18px 60px rgba(0,0,0,0.55);
+      --radius: 18px;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body{
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      color: var(--text);
+      background: radial-gradient(1200px 800px at 70% 20%, rgba(102,255,153,0.10), transparent 60%),
+                  radial-gradient(900px 600px at 20% 80%, rgba(44,255,211,0.10), transparent 55%),
+                  var(--bg);
+      overflow-x: hidden;
+    }
+
+    /* Canvas background */
+    #matrix {
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+      display: block;
+      z-index: -3;
+      background: transparent;
+    }
+
+    /* Soft overlay / vignette to make foreground readable */
+    .vignette{
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: -2;
+      background:
+        radial-gradient(1200px 900px at 50% 20%, rgba(0,0,0,0.20), rgba(0,0,0,0.55) 60%, rgba(0,0,0,0.78)),
+        linear-gradient(to bottom, rgba(0,0,0,0.20), rgba(0,0,0,0.60));
+      mix-blend-mode: normal;
+    }
+
+    /* Subtle grid texture */
+    .grid{
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: -1;
+      opacity: 0.22;
+      background-image:
+        linear-gradient(to right, rgba(120,255,180,0.07) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(120,255,180,0.06) 1px, transparent 1px);
+      background-size: 42px 42px;
+      mask-image: radial-gradient(900px 600px at 50% 25%, rgba(0,0,0,0.9), transparent 70%);
+    }
+
+    header{
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      background: linear-gradient(to bottom, rgba(6,10,14,0.70), rgba(6,10,14,0.25));
+      border-bottom: 1px solid rgba(120,255,180,0.10);
+    }
+
+    .wrap{
+      width: min(1100px, 92vw);
+      margin: 0 auto;
+    }
+
+    .nav{
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 0;
+      gap: 16px;
+    }
+
+    .brand{
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      color: var(--text);
+      letter-spacing: 0.5px;
+    }
+
+    .logo{
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      background:
+        radial-gradient(circle at 30% 30%, rgba(102,255,153,0.95), rgba(102,255,153,0.15) 55%, transparent 70%),
+        radial-gradient(circle at 70% 80%, rgba(44,255,211,0.75), rgba(44,255,211,0.12) 60%, transparent 75%),
+        rgba(6,10,14,0.55);
+      border: 1px solid rgba(120,255,180,0.18);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+      position: relative;
+      overflow: hidden;
+    }
+    .logo::after{
+      content:"";
+      position:absolute;
+      inset:-40%;
+      background: linear-gradient(115deg, transparent 35%, rgba(102,255,153,0.25), transparent 65%);
+      transform: rotate(12deg);
+      animation: sheen 4.2s ease-in-out infinite;
+    }
+    @keyframes sheen{
+      0%, 35% { transform: translateX(-30%) rotate(12deg); opacity: 0; }
+      55% { opacity: 1; }
+      100% { transform: translateX(30%) rotate(12deg); opacity: 0; }
+    }
+
+    .brand span{
+      font-weight: 700;
+      font-size: 14px;
+      color: rgba(235,255,245,0.92);
+    }
+    .brand em{
+      font-style: normal;
+      font-weight: 600;
+      color: rgba(102,255,153,0.90);
+    }
+
+    .links{
+      display:flex;
+      align-items:center;
+      gap: 14px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .links a{
+      color: var(--muted);
+      text-decoration:none;
+      font-size: 13px;
+      padding: 8px 10px;
+      border-radius: 12px;
+      border: 1px solid transparent;
+      transition: 160ms ease;
+    }
+    .links a:hover{
+      color: rgba(235,255,245,0.95);
+      border-color: rgba(120,255,180,0.14);
+      background: rgba(10,14,20,0.35);
+    }
+
+    .hero{
+      padding: 56px 0 26px;
+    }
+
+    .heroGrid{
+      display: grid;
+      grid-template-columns: 1.25fr 0.75fr;
+      gap: 18px;
+      align-items: stretch;
+    }
+
+    @media (max-width: 920px){
+      .heroGrid{ grid-template-columns: 1fr; }
+    }
+
+    .panel{
+      background: var(--panel);
+      border: 1px solid rgba(120,255,180,0.12);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      overflow: hidden;
+      position: relative;
+    }
+
+    .panel::before{
+      content:"";
+      position:absolute;
+      inset:0;
+      pointer-events:none;
+      background: radial-gradient(700px 300px at 20% 0%, rgba(102,255,153,0.12), transparent 55%),
+                  radial-gradient(700px 340px at 90% 10%, rgba(44,255,211,0.10), transparent 60%);
+      opacity: 0.9;
+    }
+
+    .panelInner{
+      position: relative;
+      padding: 26px;
+    }
+
+    .kicker{
+      display:inline-flex;
+      gap: 8px;
+      align-items:center;
+      padding: 7px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(120,255,180,0.16);
+      background: rgba(10,14,20,0.40);
+      color: rgba(210,255,230,0.75);
+      font-size: 12px;
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
+    }
+
+    .dot{
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: rgba(102,255,153,0.95);
+      box-shadow: 0 0 14px rgba(102,255,153,0.55);
+    }
+
+    h1{
+      margin: 14px 0 10px;
+      font-size: clamp(28px, 4.2vw, 44px);
+      line-height: 1.05;
+      letter-spacing: -0.6px;
+    }
+
+    .lead{
+      margin: 0 0 18px;
+      color: rgba(210,255,230,0.70);
+      font-size: 15px;
+      line-height: 1.6;
+      max-width: 62ch;
+    }
+
+    .actions{
+      display:flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 18px;
+    }
+
+    .btn{
+      appearance: none;
+      border: 1px solid rgba(120,255,180,0.18);
+      border-radius: 14px;
+      padding: 11px 14px;
+      font-weight: 650;
+      font-size: 13px;
+      letter-spacing: 0.2px;
+      background: rgba(10,14,20,0.45);
+      color: rgba(235,255,245,0.92);
+      cursor: pointer;
+      transition: 160ms ease;
+      display:inline-flex;
+      align-items:center;
+      gap: 10px;
+      text-decoration: none;
+    }
+
+    .btn:hover{
+      transform: translateY(-1px);
+      background: rgba(12,18,26,0.60);
+      border-color: rgba(102,255,153,0.28);
+    }
+
+    .btn.primary{
+      border-color: rgba(102,255,153,0.28);
+      background: linear-gradient(135deg, rgba(102,255,153,0.20), rgba(44,255,211,0.14));
+      box-shadow: 0 14px 45px rgba(0,0,0,0.42);
+    }
+
+    .btn.primary:hover{
+      border-color: rgba(102,255,153,0.45);
+      background: linear-gradient(135deg, rgba(102,255,153,0.26), rgba(44,255,211,0.18));
+    }
+
+    .icon{
+      width: 18px;
+      height: 18px;
+      display:inline-block;
+      filter: drop-shadow(0 8px 20px rgba(0,0,0,0.45));
+    }
+
+    .sideCard{
+      background: var(--panel-strong);
+    }
+
+    .statGrid{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 10px;
+    }
+
+    .stat{
+      border: 1px solid rgba(120,255,180,0.12);
+      border-radius: 16px;
+      padding: 14px;
+      background: rgba(10,14,20,0.35);
+    }
+
+    .stat strong{
+      display:block;
+      font-size: 18px;
+      letter-spacing: -0.2px;
+      margin-bottom: 4px;
+      color: rgba(235,255,245,0.92);
+    }
+
+    .stat span{
+      font-size: 12px;
+      color: rgba(210,255,230,0.62);
+      line-height: 1.35;
+    }
+
+    main{
+      padding: 10px 0 60px;
+    }
+
+    .cards{
+      display:grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      margin-top: 14px;
+    }
+
+    @media (max-width: 920px){
+      .cards{ grid-template-columns: 1fr; }
+    }
+
+    .card{
+      background: rgba(10,14,20,0.48);
+      border: 1px solid rgba(120,255,180,0.12);
+      border-radius: var(--radius);
+      padding: 18px;
+      box-shadow: 0 16px 55px rgba(0,0,0,0.35);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card::before{
+      content:"";
+      position:absolute;
+      inset:-1px;
+      background: radial-gradient(420px 200px at 20% 0%, rgba(102,255,153,0.10), transparent 55%);
+      pointer-events:none;
+    }
+
+    .card h3{
+      position: relative;
+      margin: 0 0 8px;
+      font-size: 15px;
+      letter-spacing: -0.2px;
+    }
+
+    .card p{
+      position: relative;
+      margin: 0;
+      color: rgba(210,255,230,0.66);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    footer{
+      border-top: 1px solid rgba(120,255,180,0.10);
+      padding: 22px 0 40px;
+      color: rgba(210,255,230,0.55);
+      font-size: 12px;
+    }
+
+    .footerRow{
+      display:flex;
+      gap: 14px;
+      align-items:center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+    }
+
+    .kbd{
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 11px;
+      border: 1px solid rgba(120,255,180,0.18);
+      padding: 6px 10px;
+      border-radius: 12px;
+      background: rgba(10,14,20,0.40);
+      color: rgba(210,255,230,0.70);
+      white-space: nowrap;
+    }
+
+    /* Reduced motion support */
+    @media (prefers-reduced-motion: reduce){
+      .logo::after{ animation: none; }
+      .btn:hover{ transform: none; }
+    }
+  </style>
+</head>
+
+<body>
+  <canvas id="matrix"></canvas>
+  <div class="vignette"></div>
+  <div class="grid"></div>
+
+  <header>
+    <div class="wrap">
+      <div class="nav">
+        <a class="brand" href="#">
+          <div class="logo" aria-hidden="true"></div>
+          <span>NEO<span style="opacity:.65">/</span><em>SITE</em></span>
+        </a>
+        <nav class="links" aria-label="Primary">
+          <a href="#features">Features</a>
+          <a href="#about">About</a>
+          <a href="#contact">Contact</a>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <section class="hero">
+    <div class="wrap">
+      <div class="heroGrid">
+        <div class="panel">
+          <div class="panelInner">
+            <div class="kicker"><span class="dot"></span> SYSTEM ONLINE • MATRIX MODE</div>
+            <h1>Clean foreground. Legendary Matrix rain.</h1>
+            <p class="lead">
+              A polished landing layout sitting on top of a smooth canvas-based falling-text background.
+              Lightweight, responsive, and easy to customize for your new site.
+            </p>
+            <div class="actions">
+              <a class="btn primary" href="#features">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M13 7l5 5-5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M6 12h11" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+                Explore features
+              </a>
+              <button class="btn" id="toggle">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M12 3v3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  <path d="M12 18v3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  <path d="M4.2 5.2l2.1 2.1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  <path d="M17.7 16.7l2.1 2.1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  <path d="M3 12h3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  <path d="M18 12h3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  <path d="M4.2 18.8l2.1-2.1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  <path d="M17.7 7.3l2.1-2.1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  <path d="M12 7a5 5 0 100 10 5 5 0 000-10z" stroke="currentColor" stroke-width="2"/>
+                </svg>
+                Pause / resume rain
+              </button>
+              <button class="btn" id="speed">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M12 3a9 9 0 109 9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  <path d="M12 7v6l4 2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                Speed: normal
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <aside class="panel sideCard">
+          <div class="panelInner">
+            <div class="kicker"><span class="dot"></span> QUICK STATS</div>
+            <div class="statGrid">
+              <div class="stat">
+                <strong>60 FPS</strong>
+                <span>Optimized canvas draw loop (device-dependent).</span>
+              </div>
+              <div class="stat">
+                <strong>1 file</strong>
+                <span>Just drop it in and ship it.</span>
+              </div>
+              <div class="stat">
+                <strong>Readable</strong>
+                <span>Vignette + glass panels keep text crisp.</span>
+              </div>
+              <div class="stat">
+                <strong>Custom</strong>
+                <span>Change charset, colors, density, speed.</span>
+              </div>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </section>
+
+  <main>
+    <div class="wrap">
+      <section id="features" class="cards" aria-label="Features">
+        <div class="card">
+          <h3>Matrix rain background</h3>
+          <p>Canvas-driven falling characters with glow, trails, and responsive resizing.</p>
+        </div>
+        <div class="card">
+          <h3>Modern UI overlay</h3>
+          <p>Glassmorphism panels, soft gradients, and a sticky blurred header that feels premium.</p>
+        </div>
+        <div class="card">
+          <h3>Controls + accessibility</h3>
+          <p>Pause/resume, speed toggle, and reduced-motion support baked in.</p>
+        </div>
+      </section>
+
+      <section id="about" style="margin-top:18px" class="panel">
+        <div class="panelInner">
+          <div class="kicker"><span class="dot"></span> ABOUT</div>
+          <p class="lead" style="margin-top:12px">
+            Customize the site by editing the text content and tweaking the Matrix settings in the script near the bottom.
+            This template is a strong starting point for a landing page, portfolio, or product splash.
+          </p>
+        </div>
+      </section>
+
+      <section id="contact" style="margin-top:14px" class="panel">
+        <div class="panelInner">
+          <div class="kicker"><span class="dot"></span> CONTACT</div>
+          <p class="lead" style="margin-top:12px">
+            Replace this with your form or contact details. If you want, tell me your brand name + vibe (sleek, hacker, corporate, etc.)
+            and I’ll restyle the foreground to match while keeping the Matrix rain.
+          </p>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer>
+    <div class="wrap">
+      <div class="footerRow">
+        <div>© <span id="year"></span> NEO/SITE. All systems nominal.</div>
+        <div class="kbd">Tip: press <strong>Space</strong> to pause/resume</div>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // ---------------------------
+    // Matrix Rain (Canvas)
+    // ---------------------------
+    const canvas = document.getElementById("matrix");
+    const ctx = canvas.getContext("2d", { alpha: true });
+
+    const settings = {
+      fontSize: 16,
+      columnSpacing: 1,    // 1 = tight, >1 = sparser
+      trailFade: 0.07,     // higher = shorter trails
+      glow: 12,            // glow blur
+      baseSpeed: 1.0,      // baseline multiplier
+      speedMode: 1,        // 0.7 slow, 1 normal, 1.35 fast
+      paused: false,
+      // Classic-ish charset, plus some katakana for flavor
+      charset: "アァカサタナハマヤャラワンガザダバパイィキシチニヒミリヰギジヂビピウゥクスツヌフムユュルグズヅブプエェケセテネヘメレヱゲゼデベペオォコソトノホモヨョロヲゴゾドボポヴ0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ#$%&*+-<>=?!"
+    };
+
+    let width, height, columns, drops, speeds;
+
+    function resize() {
+      const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+      width = Math.floor(window.innerWidth);
+      height = Math.floor(window.innerHeight);
+
+      canvas.width = Math.floor(width * dpr);
+      canvas.height = Math.floor(height * dpr);
+      canvas.style.width = width + "px";
+      canvas.style.height = height + "px";
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+      ctx.font = `${settings.fontSize}px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace`;
+
+      columns = Math.floor(width / (settings.fontSize * settings.columnSpacing));
+      drops = new Array(columns).fill(0).map(() => Math.random() * height / settings.fontSize);
+      speeds = new Array(columns).fill(0).map(() => 0.6 + Math.random() * 1.4);
+    }
+
+    function randChar() {
+      const s = settings.charset;
+      return s.charAt((Math.random() * s.length) | 0);
+    }
+
+    function draw() {
+      if (!settings.paused) {
+        // Fade the previous frame (trail)
+        ctx.fillStyle = `rgba(0, 0, 0, ${settings.trailFade})`;
+        ctx.fillRect(0, 0, width, height);
+
+        // Glow styling
+        ctx.shadowColor = "rgba(102, 255, 153, 0.6)";
+        ctx.shadowBlur = settings.glow;
+
+        for (let i = 0; i < columns; i++) {
+          const x = i * settings.fontSize * settings.columnSpacing;
+          const y = drops[i] * settings.fontSize;
+
+          // Leading bright character
+          ctx.fillStyle = "rgba(235, 255, 245, 0.85)";
+          ctx.fillText(randChar(), x, y);
+
+          // Trailing green characters (slightly dimmer)
+          ctx.fillStyle = "rgba(102, 255, 153, 0.55)";
+          ctx.fillText(randChar(), x, y - settings.fontSize);
+
+          const speed = settings.baseSpeed * settings.speedMode * speeds[i];
+          drops[i] += speed;
+
+          // Reset drop to top randomly when it passes bottom
+          if (y > height && Math.random() > 0.965) {
+            drops[i] = -Math.random() * 20;
+            speeds[i] = 0.6 + Math.random() * 1.4;
+          }
+        }
+
+        ctx.shadowBlur = 0;
+      }
+
+      requestAnimationFrame(draw);
+    }
+
+    // Controls
+    const toggleBtn = document.getElementById("toggle");
+    const speedBtn = document.getElementById("speed");
+    const speedModes = [
+      { label: "slow", value: 0.72 },
+      { label: "normal", value: 1.00 },
+      { label: "fast", value: 1.35 }
+    ];
+    let speedIndex = 1;
+
+    function updateSpeedLabel() {
+      speedBtn.textContent = `Speed: ${speedModes[speedIndex].label}`;
+    }
+
+    toggleBtn.addEventListener("click", () => {
+      settings.paused = !settings.paused;
+    });
+
+    speedBtn.addEventListener("click", () => {
+      speedIndex = (speedIndex + 1) % speedModes.length;
+      settings.speedMode = speedModes[speedIndex].value;
+      updateSpeedLabel();
+    });
+
+    window.addEventListener("keydown", (e) => {
+      if (e.code === "Space") {
+        e.preventDefault();
+        settings.paused = !settings.paused;
+      }
+      if (e.key.toLowerCase() === "s") {
+        speedIndex = (speedIndex + 1) % speedModes.length;
+        settings.speedMode = speedModes[speedIndex].value;
+        updateSpeedLabel();
+      }
+    });
+
+    // Init
+    document.getElementById("year").textContent = new Date().getFullYear();
+    updateSpeedLabel();
+    resize();
+    window.addEventListener("resize", resize);
+    draw();
+  </script>
+</body>
+</html>
